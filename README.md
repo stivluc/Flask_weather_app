@@ -6,7 +6,7 @@ A real-time weather dashboard that demonstrates **Model Context Protocol (MCP)**
 
 **Model Context Protocol (MCP)** is a standardized way for AI assistants to connect to external tools and data sources. This weather dashboard showcases MCP in action by:
 
-- 🌐 **Real-time Data**: Fetching live weather information instead of dummy data
+- 🌐 **Real-time Data**: Fetching live weather information from OpenWeatherMap API
 - 🔍 **Smart Search**: Using geocoding APIs to find cities worldwide with coordinates
 - 📊 **Dynamic Interaction**: Seamless integration between AI and external services
 
@@ -24,28 +24,33 @@ A real-time weather dashboard that demonstrates **Model Context Protocol (MCP)**
 ### Local Development
 
 1. **Clone the repository**
+
 ```bash
 git clone https://github.com/yourusername/mcp-weather-dashboard.git
 cd mcp-weather-dashboard
 ```
 
 2. **Create virtual environment**
+
 ```bash
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 3. **Install dependencies**
+
 ```bash
 pip install -r requirements.txt
 ```
 
 4. **Set API key**
+
 ```bash
 export API_KEY=your_openweathermap_api_key_here
 ```
 
 5. **Run the application**
+
 ```bash
 python app.py
 ```
@@ -63,7 +68,7 @@ python app.py
 Deploy this app for free on multiple platforms:
 
 - **Render** (Recommended): [render.com](https://render.com)
-- **Railway**: [railway.app](https://railway.app)  
+- **Railway**: [railway.app](https://railway.app)
 - **PythonAnywhere**: [pythonanywhere.com](https://pythonanywhere.com)
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
@@ -117,7 +122,7 @@ This project is open source and available under the [MIT License](LICENSE).
 ## 🎉 Demo Features in Action
 
 1. **Search any city** → Real-time weather data appears
-2. **Toggle units** → Switch between °F and °C instantly  
+2. **Toggle units** → Switch between °F and °C instantly
 3. **5-day forecast** → Extended weather predictions
 4. **Smart autocomplete** → Find cities with coordinates
 5. **Error handling** → Graceful handling of invalid cities
