@@ -438,6 +438,129 @@ def index():
             line-height: 1.7;
             margin-bottom: 15px;
         }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .container {
+                padding: 20px;
+                border-radius: 15px;
+            }
+            
+            h1 {
+                font-size: 2em;
+                margin-bottom: 8px;
+            }
+            
+            .subtitle {
+                font-size: 1em;
+                margin-bottom: 25px;
+            }
+            
+            .search-section {
+                flex-direction: column;
+                gap: 15px;
+            }
+            
+            .search-input-container {
+                min-width: 100%;
+            }
+            
+            #citySearch {
+                font-size: 16px; /* Prevents zoom on iOS */
+            }
+            
+            .unit-toggle {
+                justify-content: center;
+                margin: 0;
+            }
+            
+            .weather-card {
+                padding: 20px;
+                margin-bottom: 15px;
+            }
+            
+            .weather-card h2 {
+                font-size: 1.5em;
+            }
+            
+            .temperature {
+                font-size: 2.5em;
+            }
+            
+            .forecast-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 10px;
+            }
+            
+            .forecast-card {
+                padding: 12px;
+            }
+            
+            .popular-grid {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .popular-city-btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .mcp-info {
+                padding: 20px;
+                margin-top: 20px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 15px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .temperature {
+                font-size: 2em;
+            }
+            
+            .weather-info {
+                font-size: 0.9em;
+            }
+            
+            .forecast-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .forecast-card {
+                padding: 15px;
+                text-align: center;
+            }
+            
+            .autocomplete-dropdown {
+                max-height: 200px;
+            }
+        }
+        
+        /* Touch-friendly interactions */
+        @media (hover: none) and (pointer: coarse) {
+            .popular-city-btn,
+            button {
+                min-height: 44px;
+                font-size: 16px;
+            }
+            
+            .autocomplete-item {
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+            }
+        }
     </style>
 </head>
 <body>
