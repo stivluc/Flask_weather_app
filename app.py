@@ -8,6 +8,10 @@ from flask import Flask, render_template_string, jsonify, request
 import json
 import os
 import requests
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 from datetime import datetime
 
 app = Flask(__name__)
@@ -20,6 +24,7 @@ if not API_KEY:
 WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather"
 FORECAST_URL = "http://api.openweathermap.org/data/2.5/forecast"
 GEOCODING_URL = "http://api.openweathermap.org/geo/1.0/direct"
+ONECALL_URL = "http://api.openweathermap.org/data/3.0/onecall"
 
 # Popular cities for quick access
 POPULAR_CITIES = ["New York", "London", "Tokyo", "Paris", "Sydney", "Los Angeles", "Berlin", "Mumbai"]
@@ -49,6 +54,40 @@ def get_coordinates_for_city(city):
         print(f"Geocoding API Error: {e}")
         return None
 
+def get_enhanced_weather_data(lat, lon, units='imperial'):
+    """Get enhanced weather data including UV index using One Call API"""
+    try:
+        params = {
+            'lat': lat,
+            'lon': lon,
+            'appid': API_KEY,
+            'units': units,
+            'exclude': 'minutely,alerts'
+        }
+        response = requests.get(ONECALL_URL, params=params, timeout=10)
+        
+        if response.status_code == 200:
+            data = response.json()
+            current = data['current']
+            daily = data['daily'][0]
+            hourly = data['hourly'][:24]  # Next 24 hours
+            
+            # Calculate rain probability from hourly data
+            rain_prob = 0
+            for hour in hourly:
+                if 'pop' in hour:
+                    rain_prob = max(rain_prob, hour['pop'] * 100)
+            
+            return {
+                'uv_index': current.get('uvi', 0),
+                'rain_prob': f"{rain_prob:.0f}%",
+                'temp_min': daily['temp']['min'],
+                'temp_max': daily['temp']['max']
+            }
+    except Exception as e:
+        print(f"Enhanced Weather API Error: {e}")
+        return None
+
 def get_weather_via_api(city, units='imperial'):
     """Get weather data with geocoding fallback"""
     try:
@@ -63,13 +102,35 @@ def get_weather_via_api(city, units='imperial'):
         if response.status_code == 200:
             data = response.json()
             temp_unit = '°F' if units == 'imperial' else '°C'
-            return {
+            
+            # Get enhanced data from One Call API
+            enhanced = get_enhanced_weather_data(data['coord']['lat'], data['coord']['lon'], units)
+            
+            result = {
                 'temperature': f"{int(data['main']['temp'])}{temp_unit}",
                 'condition': data['weather'][0]['description'],
                 'humidity': f"{data['main']['humidity']}%",
                 'city': data['name'],
                 'country': data['sys']['country']
             }
+            
+            if enhanced:
+                result.update({
+                    'temp_min': f"{int(enhanced['temp_min'])}{temp_unit}",
+                    'temp_max': f"{int(enhanced['temp_max'])}{temp_unit}",
+                    'rain_prob': enhanced['rain_prob'],
+                    'uv_index': f"{enhanced['uv_index']:.0f}"
+                })
+            else:
+                # Fallback values with proper placeholders
+                result.update({
+                    'temp_min': f"{int(data['main']['temp_min'])}{temp_unit}",
+                    'temp_max': f"{int(data['main']['temp_max'])}{temp_unit}",
+                    'rain_prob': "No data",
+                    'uv_index': "No data"
+                })
+            
+            return result
         else:
             # Geocoding fallback
             coordinates = get_coordinates_for_city(city)
@@ -85,13 +146,35 @@ def get_weather_via_api(city, units='imperial'):
                 if coord_response.status_code == 200:
                     data = coord_response.json()
                     temp_unit = '°F' if units == 'imperial' else '°C'
-                    return {
+                    
+                    # Get enhanced data from One Call API
+                    enhanced = get_enhanced_weather_data(coordinates['lat'], coordinates['lon'], units)
+                    
+                    result = {
                         'temperature': f"{int(data['main']['temp'])}{temp_unit}",
                         'condition': data['weather'][0]['description'],
                         'humidity': f"{data['main']['humidity']}%",
                         'city': coordinates['name'],
                         'country': coordinates['country']
                     }
+                    
+                    if enhanced:
+                        result.update({
+                            'temp_min': f"{int(enhanced['temp_min'])}{temp_unit}",
+                            'temp_max': f"{int(enhanced['temp_max'])}{temp_unit}",
+                            'rain_prob': enhanced['rain_prob'],
+                            'uv_index': f"{enhanced['uv_index']:.0f}"
+                        })
+                    else:
+                        # Fallback values with proper placeholders
+                        result.update({
+                            'temp_min': f"{int(data['main']['temp_min'])}{temp_unit}",
+                            'temp_max': f"{int(data['main']['temp_max'])}{temp_unit}",
+                            'rain_prob': "No data",
+                            'uv_index': "No data"
+                        })
+                    
+                    return result
             return None
     except Exception as e:
         print(f"Weather API Error: {e}")
@@ -339,6 +422,39 @@ def index():
             opacity: 0.9;
         }
         
+        .weather-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .weather-detail-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.95em;
+        }
+        
+        .detail-icon {
+            font-size: 1.2em;
+            width: 20px;
+        }
+        
+        .detail-label {
+            font-size: 0.85em;
+            opacity: 0.8;
+            min-width: 55px;
+            text-align: left;
+        }
+        
+        .detail-value {
+            font-weight: 500;
+            flex: 1;
+        }
+        
         .popular-cities-title {
             margin-bottom: 10px;
         }
@@ -514,6 +630,17 @@ def index():
                 padding: 20px;
                 margin-top: 20px;
             }
+            
+            .weather-details {
+                grid-template-columns: 1fr;
+                gap: 10px;
+                margin-top: 15px;
+            }
+            
+            .weather-detail-item {
+                font-size: 0.9em;
+                justify-content: center;
+            }
         }
         
         @media (max-width: 480px) {
@@ -590,7 +717,29 @@ def index():
             <div class="city-name" id="searchCityName"></div>
             <div class="temperature" id="searchTemp"></div>
             <div class="condition" id="searchCondition"></div>
-            <div class="humidity" id="searchHumidity"></div>
+            
+            <div class="weather-details">
+                <div class="weather-detail-item">
+                    <span class="detail-icon">🌡️</span>
+                    <span class="detail-label">Range:</span>
+                    <span class="detail-value" id="searchMinMax"></span>
+                </div>
+                <div class="weather-detail-item">
+                    <span class="detail-icon">🌦️</span>
+                    <span class="detail-label">Rain:</span>
+                    <span class="detail-value" id="searchRainProb"></span>
+                </div>
+                <div class="weather-detail-item">
+                    <span class="detail-icon">☀️</span>
+                    <span class="detail-label">UV:</span>
+                    <span class="detail-value" id="searchUVIndex"></span>
+                </div>
+                <div class="weather-detail-item">
+                    <span class="detail-icon">💧</span>
+                    <span class="detail-label">Humidity:</span>
+                    <span class="detail-value" id="searchHumidity"></span>
+                </div>
+            </div>
         </div>
         
         <div class="forecast-section" id="forecastSection">
@@ -676,6 +825,9 @@ def index():
             document.getElementById('searchCityName').textContent = query;
             document.getElementById('searchTemp').textContent = 'Loading...';
             document.getElementById('searchCondition').textContent = '';
+            document.getElementById('searchMinMax').textContent = '';
+            document.getElementById('searchRainProb').textContent = '';
+            document.getElementById('searchUVIndex').textContent = '';
             document.getElementById('searchHumidity').textContent = '';
             
             try {
@@ -685,19 +837,28 @@ def index():
                 if (response.ok) {
                     document.getElementById('searchTemp').textContent = data.temperature;
                     document.getElementById('searchCondition').textContent = data.condition;
-                    document.getElementById('searchHumidity').textContent = `💧 ${data.humidity}`;
+                    document.getElementById('searchMinMax').textContent = `${data.temp_min} - ${data.temp_max}`;
+                    document.getElementById('searchRainProb').textContent = data.rain_prob;
+                    document.getElementById('searchUVIndex').textContent = `UV ${data.uv_index}`;
+                    document.getElementById('searchHumidity').textContent = data.humidity;
                     loadForecast(query, units);
                 } else {
                     card.classList.add('error');
                     document.getElementById('searchTemp').textContent = '❌';
-                    document.getElementById('searchCondition').textContent = 'City not found';
-                    document.getElementById('searchHumidity').textContent = 'Please check the city name';
+                    document.getElementById('searchCondition').textContent = 'City not found - Please check the city name';
+                    document.getElementById('searchMinMax').textContent = '';
+                    document.getElementById('searchRainProb').textContent = '';
+                    document.getElementById('searchUVIndex').textContent = '';
+                    document.getElementById('searchHumidity').textContent = '';
                 }
             } catch (error) {
                 card.classList.add('error');
                 document.getElementById('searchTemp').textContent = '🌐';
-                document.getElementById('searchCondition').textContent = 'Network error';
-                document.getElementById('searchHumidity').textContent = 'Please check your connection';
+                document.getElementById('searchCondition').textContent = 'Network error - Please check your connection';
+                document.getElementById('searchMinMax').textContent = '';
+                document.getElementById('searchRainProb').textContent = '';
+                document.getElementById('searchUVIndex').textContent = '';
+                document.getElementById('searchHumidity').textContent = '';
             }
         }
 
