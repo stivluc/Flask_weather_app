@@ -214,6 +214,7 @@ def index():
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MCP Weather Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -508,26 +509,32 @@ def index():
         }
         
         .favorite-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: none;
+            border: none;
             color: white;
-            padding: 6px 8px;
-            border-radius: 20px;
             cursor: pointer;
-            font-size: 16px;
+            font-size: 1.8em;
+            height: fit-content;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.2));
         }
         
         .favorite-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.05);
+            transform: scale(1.1);
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
         }
         
         .favorite-btn.favorited {
-            background: #ffd700;
-            border-color: #ffd700;
-            color: #333;
+            background: linear-gradient(45deg, #ffeb3b, #ffd700, #fff59d);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            filter: drop-shadow(0 1px 3px rgba(255,235,59,0.6));
         }
         
         .favorite-cities {
@@ -877,7 +884,7 @@ def index():
             <button id="searchBtn">🔍 Search</button>
             <div class="unit-toggle">
                 <label class="toggle-label">
-                    <input type="checkbox" id="unitToggle" />
+                    <input type="checkbox" id="unitToggle" checked />
                     <span class="toggle-slider"></span>
                     <span class="unit-text">
                         <span id="fahrenheit">°F</span>
@@ -890,7 +897,9 @@ def index():
         <div class="search-result-card" id="searchResultCard">
             <div class="weather-header">
                 <div class="city-name" id="searchCityName"></div>
-                <button class="favorite-btn" id="favoriteBtn" title="Add to favorites">☆</button>
+                <button class="favorite-btn" id="favoriteBtn" title="Add to favorites">
+                    <i class="far fa-star"></i>
+                </button>
             </div>
             <div class="temperature" id="searchTemp"></div>
             <div class="feels-like" id="searchFeelsLike">Feels like: --</div>
@@ -898,43 +907,43 @@ def index():
             
             <div class="weather-details-grid">
                 <div class="weather-detail">
-                    <span class="detail-icon">💧</span>
-                    <span class="detail-label">Humidity:</span>
+                    <i class="fas fa-tint detail-icon"></i>
+                    <span class="detail-label">Humidity</span>
                     <span class="detail-value" id="searchHumidity">--</span>
                 </div>
                 <div class="weather-detail">
-                    <span class="detail-icon">💨</span>
-                    <span class="detail-label">Wind:</span>
+                    <i class="fas fa-wind detail-icon"></i>
+                    <span class="detail-label">Wind</span>
                     <span class="detail-value" id="searchWind">--</span>
                 </div>
                 <div class="weather-detail">
-                    <span class="detail-icon">🌍</span>
-                    <span class="detail-label">Air Quality:</span>
+                    <i class="fas fa-leaf detail-icon"></i>
+                    <span class="detail-label">Air Quality</span>
                     <span class="detail-value" id="searchAQI">--</span>
                 </div>
                 <div class="weather-detail">
-                    <span class="detail-icon">☁️</span>
-                    <span class="detail-label">Clouds:</span>
+                    <i class="fas fa-cloud detail-icon"></i>
+                    <span class="detail-label">Clouds</span>
                     <span class="detail-value" id="searchClouds">--</span>
                 </div>
                 <div class="weather-detail">
-                    <span class="detail-icon">👁️</span>
-                    <span class="detail-label">Visibility:</span>
+                    <i class="fas fa-eye detail-icon"></i>
+                    <span class="detail-label">Visibility</span>
                     <span class="detail-value" id="searchVisibility">--</span>
                 </div>
                 <div class="weather-detail">
-                    <span class="detail-icon">🌡️</span>
-                    <span class="detail-label">Pressure:</span>
+                    <i class="fas fa-thermometer-half detail-icon"></i>
+                    <span class="detail-label">Pressure</span>
                     <span class="detail-value" id="searchPressure">--</span>
                 </div>
                 <div class="weather-detail">
-                    <span class="detail-icon">🌅</span>
-                    <span class="detail-label">Sunrise:</span>
+                    <i class="fas fa-sun detail-icon"></i>
+                    <span class="detail-label">Sunrise</span>
                     <span class="detail-value" id="searchSunrise">--</span>
                 </div>
                 <div class="weather-detail">
-                    <span class="detail-icon">🌇</span>
-                    <span class="detail-label">Sunset:</span>
+                    <i class="fas fa-moon detail-icon"></i>
+                    <span class="detail-label">Sunset</span>
                     <span class="detail-value" id="searchSunset">--</span>
                 </div>
             </div>
@@ -1057,11 +1066,11 @@ def index():
             if (currentCity === cityName) {
                 if (isFavorite(cityName)) {
                     favoriteBtn.classList.add('favorited');
-                    favoriteBtn.innerHTML = '★';
+                    favoriteBtn.innerHTML = '<i class="fas fa-star"></i>';
                     favoriteBtn.title = 'Remove from favorites';
                 } else {
                     favoriteBtn.classList.remove('favorited');
-                    favoriteBtn.innerHTML = '☆';
+                    favoriteBtn.innerHTML = '<i class="far fa-star"></i>';
                     favoriteBtn.title = 'Add to favorites';
                 }
             }
@@ -1280,7 +1289,7 @@ def index():
 @app.route('/api/weather/<city>')
 def get_weather(city):
     """API endpoint to get weather data for any city"""
-    units = request.args.get('units', 'imperial')
+    units = request.args.get('units', 'metric')
     weather = get_weather_via_api(city, units)
     if weather:
         # Return all the enhanced weather data
@@ -1366,7 +1375,7 @@ def autocomplete_cities(query):
 @app.route('/api/forecast/<city>')
 def get_forecast(city):
     """API endpoint to get 5-day weather forecast"""
-    units = request.args.get('units', 'imperial')
+    units = request.args.get('units', 'metric')
     
     try:
         coordinates = get_coordinates_for_city(city)
