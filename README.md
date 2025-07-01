@@ -1,14 +1,6 @@
-# 🌤️ MCP Weather Dashboard
+# 🌤️ Weather Dashboard
 
-A real-time weather dashboard that demonstrates **Model Context Protocol (MCP)** with live data from OpenWeatherMap API.
-
-## 🎯 What is MCP?
-
-**Model Context Protocol (MCP)** is a standardized way for AI assistants to connect to external tools and data sources. This weather dashboard showcases MCP in action by:
-
-- 🌐 **Real-time Data**: Fetching live weather information from OpenWeatherMap API
-- 🔍 **Smart Search**: Using geocoding APIs to find cities worldwide with coordinates
-- 📊 **Dynamic Interaction**: Seamless integration between AI and external services
+A real-time weather dashboard with data from OpenWeatherMap API. Built to try Flask.
 
 ## ✨ Features
 
@@ -26,8 +18,8 @@ A real-time weather dashboard that demonstrates **Model Context Protocol (MCP)**
 1. **Clone the repository**
 
 ```bash
-git clone https://github.com/yourusername/mcp-weather-dashboard.git
-cd mcp-weather-dashboard
+git clone https://github.com/yourusername/weather-dashboard.git
+cd weather-dashboard
 ```
 
 2. **Create virtual environment**
@@ -83,7 +75,7 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions.
 ## 📁 Project Structure
 
 ```
-mcp-weather-dashboard/
+weather-dashboard/
 ├── app.py              # Main Flask application
 ├── requirements.txt    # Python dependencies
 ├── Procfile           # Deployment configuration
@@ -128,5 +120,3 @@ This project is open source and available under the [MIT License](LICENSE).
 5. **Error handling** → Graceful handling of invalid cities
 
 ---
-
-**Built with ❤️ to demonstrate Model Context Protocol (MCP) capabilities**

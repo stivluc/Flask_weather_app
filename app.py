@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-MCP Weather Dashboard - Production Version
-Demonstrates Model Context Protocol integration with real weather data
+Weather Dashboard - Production Version
+Real-time weather data from OpenWeatherMap API
 """
 
 from flask import Flask, render_template_string, jsonify, request
@@ -213,7 +213,7 @@ def index():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCP Weather Dashboard</title>
+    <title>Weather Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -873,8 +873,8 @@ def index():
 </head>
 <body>
     <div class="container">
-        <h1>🌤️ MCP Weather Dashboard <span class="mcp-badge">LIVE DATA</span></h1>
-        <p class="subtitle">Real-time weather powered by Model Context Protocol</p>
+        <h1>🌤️ Weather Dashboard <span class="mcp-badge">LIVE DATA</span></h1>
+        <p class="subtitle">Real-time weather data from OpenWeatherMap API</p>
         
         <div class="search-section">
             <div class="search-input-container">
@@ -970,12 +970,12 @@ def index():
         </div>
         
         <div class="mcp-info">
-            <h3>🔧 About this MCP Demo</h3>
-            <p><strong>Model Context Protocol (MCP)</strong> is a standardized way for AI assistants to connect to external tools and data sources. This weather dashboard demonstrates MCP in action:</p>
-            <p>🌐 <strong>Real-time Data</strong>: This app fetches live weather information from OpenWeatherMap API</p>
-            <p>🔍 <strong>Smart Search</strong>: The autocomplete feature uses geocoding APIs to find cities worldwide with coordinates</p>
-            <p>📊 <strong>Dynamic Interaction</strong>: MCP enables seamless integration between AI assistants and external services, making tools like this weather dashboard possible</p>
-            <p>This is a practical example of how MCP bridges the gap between AI and real-world data sources, creating more useful and interactive applications.</p>
+            <h3>🔧 About this Weather Dashboard</h3>
+            <p>This weather dashboard provides real-time weather information using the OpenWeatherMap API.</p>
+            <p>🌐 <strong>Real-time Data</strong>: Live weather information from OpenWeatherMap API</p>
+            <p>🔍 <strong>Smart Search</strong>: Autocomplete feature with geocoding to find cities worldwide</p>
+            <p>📊 <strong>Comprehensive Data</strong>: Current weather, 5-day forecast, air quality, and detailed meteorological information</p>
+            <p>A modern web application built with Flask, featuring responsive design and interactive weather data visualization.</p>
         </div>
     </div>
 
