@@ -39,6 +39,9 @@ def get_coordinates_for_city(city):
         }
         response = requests.get(GEOCODING_URL, params=params, timeout=10)
         
+        if response.status_code == 429:
+            return None  # Rate limit hit, will be handled by caller
+        
         if response.status_code == 200:
             data = response.json()
             if data and len(data) > 0:
@@ -91,6 +94,14 @@ def get_weather_via_api(city, units='imperial'):
             'units': units
         }
         response = requests.get(WEATHER_URL, params=params, timeout=10)
+        
+        # Check for API rate limit
+        if response.status_code == 429:
+            return {
+                'error': 'rate_limit',
+                'message': 'API rate limit exceeded for today. Please try again tomorrow.',
+                'city': city
+            }
         
         if response.status_code == 200:
             data = response.json()
@@ -1187,9 +1198,18 @@ def index():
                     loadForecast(query, units);
                 } else {
                     card.classList.add('error');
-                    document.getElementById('searchTemp').textContent = '❌';
-                    document.getElementById('searchFeelsLike').textContent = 'Feels like: --';
-                    document.getElementById('searchCondition').textContent = 'City not found - Please check the city name';
+                    
+                    // Check if it's a rate limit error
+                    if (data.error === 'rate_limit') {
+                        document.getElementById('searchTemp').textContent = '⏰';
+                        document.getElementById('searchFeelsLike').textContent = 'Feels like: --';
+                        document.getElementById('searchCondition').textContent = 'API rate limit reached for today. Please try again tomorrow!';
+                    } else {
+                        document.getElementById('searchTemp').textContent = '❌';
+                        document.getElementById('searchFeelsLike').textContent = 'Feels like: --';
+                        document.getElementById('searchCondition').textContent = 'City not found - Please check the city name';
+                    }
+                    
                     document.getElementById('searchHumidity').textContent = '--';
                     document.getElementById('searchWind').textContent = '--';
                     document.getElementById('searchAQI').textContent = '--';
@@ -1292,6 +1312,14 @@ def get_weather(city):
     units = request.args.get('units', 'metric')
     weather = get_weather_via_api(city, units)
     if weather:
+        # Check if it's a rate limit error
+        if weather.get('error') == 'rate_limit':
+            return jsonify({
+                'error': 'rate_limit',
+                'message': weather['message'],
+                'city': weather['city']
+            }), 429
+        
         # Return all the enhanced weather data
         result = {
             'city': weather['city'],
