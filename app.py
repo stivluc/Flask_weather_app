@@ -500,6 +500,117 @@ def index():
             font-size: 0.95em;
         }
         
+        .weather-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .favorite-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .favorite-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1);
+        }
+        
+        .favorite-btn.favorited {
+            background: #ffd700;
+            border-color: #ffd700;
+            color: #333;
+        }
+        
+        .favorite-cities {
+            margin-bottom: 40px;
+        }
+        
+        .favorite-cities-title {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.3em;
+        }
+        
+        .favorite-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .favorite-placeholder {
+            text-align: center;
+            padding: 30px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 15px;
+            width: 100%;
+        }
+        
+        .favorite-placeholder p {
+            margin: 0 0 10px 0;
+            color: #6c757d;
+        }
+        
+        .placeholder-hint {
+            font-size: 0.9em;
+            opacity: 0.8;
+        }
+        
+        .favorite-city-btn {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #333;
+            padding: 15px 25px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+            width: auto;
+            min-width: fit-content;
+            white-space: nowrap;
+            position: relative;
+        }
+        
+        .favorite-city-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
+        }
+        
+        .favorite-city-btn .remove-favorite {
+            background: rgba(220, 53, 69, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+        }
+        
+        .favorite-city-btn .remove-favorite:hover {
+            background: #dc3545;
+            transform: scale(1.1);
+        }
+        
         .popular-cities-title {
             margin-bottom: 10px;
         }
@@ -773,7 +884,10 @@ def index():
         </div>
         
         <div class="search-result-card" id="searchResultCard">
-            <div class="city-name" id="searchCityName"></div>
+            <div class="weather-header">
+                <div class="city-name" id="searchCityName"></div>
+                <button class="favorite-btn" id="favoriteBtn" title="Add to favorites">⭐</button>
+            </div>
             <div class="temperature" id="searchTemp"></div>
             <div class="feels-like" id="searchFeelsLike">Feels like: --</div>
             <div class="condition" id="searchCondition"></div>
@@ -827,6 +941,16 @@ def index():
             <div class="forecast-grid" id="forecastGrid"></div>
         </div>
         
+        <div class="favorite-cities" id="favoriteCities">
+            <h3 class="favorite-cities-title">⭐ Favorite Cities</h3>
+            <div class="favorite-grid" id="favoriteGrid">
+                <div class="favorite-placeholder" id="favoritePlaceholder">
+                    <p>💫 No favorite cities yet!</p>
+                    <p class="placeholder-hint">Search for a city and click the ⭐ to add it to your favorites</p>
+                </div>
+            </div>
+        </div>
+        
         <div class="popular-cities">
             <h3 class="popular-cities-title">Popular Cities</h3>
             <div class="popular-grid" id="popularGrid"></div>
@@ -851,13 +975,101 @@ def index():
             return directions[index];
         }
 
+        // Local Storage for Favorites
+        function getFavorites() {
+            return JSON.parse(localStorage.getItem('weatherFavorites') || '[]');
+        }
+        
+        function saveFavorites(favorites) {
+            localStorage.setItem('weatherFavorites', JSON.stringify(favorites));
+        }
+        
+        function addToFavorites(cityName) {
+            const favorites = getFavorites();
+            if (!favorites.includes(cityName)) {
+                favorites.push(cityName);
+                saveFavorites(favorites);
+                renderFavorites();
+                updateFavoriteButton(cityName);
+            }
+        }
+        
+        function removeFromFavorites(cityName) {
+            const favorites = getFavorites();
+            const index = favorites.indexOf(cityName);
+            if (index > -1) {
+                favorites.splice(index, 1);
+                saveFavorites(favorites);
+                renderFavorites();
+                updateFavoriteButton(cityName);
+            }
+        }
+        
+        function isFavorite(cityName) {
+            return getFavorites().includes(cityName);
+        }
+        
+        function renderFavorites() {
+            const favoriteGrid = document.getElementById('favoriteGrid');
+            const favoritePlaceholder = document.getElementById('favoritePlaceholder');
+            const favorites = getFavorites();
+            
+            if (favorites.length === 0) {
+                favoritePlaceholder.style.display = 'block';
+                const favoriteBtns = favoriteGrid.querySelectorAll('.favorite-city-btn');
+                favoriteBtns.forEach(btn => btn.remove());
+            } else {
+                favoritePlaceholder.style.display = 'none';
+                
+                // Remove existing buttons
+                const existingBtns = favoriteGrid.querySelectorAll('.favorite-city-btn');
+                existingBtns.forEach(btn => btn.remove());
+                
+                // Add favorite buttons
+                favorites.forEach(city => {
+                    const cityBtn = document.createElement('button');
+                    cityBtn.className = 'favorite-city-btn';
+                    cityBtn.textContent = city;
+                    cityBtn.onclick = () => searchSpecificCity(city);
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'remove-favorite';
+                    removeBtn.innerHTML = '×';
+                    removeBtn.onclick = (e) => {
+                        e.stopPropagation();
+                        removeFromFavorites(city);
+                    };
+                    
+                    cityBtn.appendChild(removeBtn);
+                    favoriteGrid.appendChild(cityBtn);
+                });
+            }
+        }
+        
+        function updateFavoriteButton(cityName) {
+            const favoriteBtn = document.getElementById('favoriteBtn');
+            const currentCity = document.getElementById('searchCityName').textContent;
+            
+            if (currentCity === cityName) {
+                if (isFavorite(cityName)) {
+                    favoriteBtn.classList.add('favorited');
+                    favoriteBtn.title = 'Remove from favorites';
+                } else {
+                    favoriteBtn.classList.remove('favorited');
+                    favoriteBtn.title = 'Add to favorites';
+                }
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', async function() {
             renderPopularCities();
+            renderFavorites();
             updateUnitDisplay();
             
             const searchBtn = document.getElementById('searchBtn');
             const searchInput = document.getElementById('citySearch');
             const unitToggle = document.getElementById('unitToggle');
+            const favoriteBtn = document.getElementById('favoriteBtn');
             
             searchBtn.addEventListener('click', searchCity);
             searchInput.addEventListener('keypress', function(e) {
@@ -869,6 +1081,17 @@ def index():
                 const query = searchInput.value.trim();
                 if (query && document.getElementById('searchResultCard').classList.contains('show')) {
                     searchCity();
+                }
+            });
+            
+            favoriteBtn.addEventListener('click', function() {
+                const cityName = document.getElementById('searchCityName').textContent;
+                if (cityName && cityName !== '') {
+                    if (isFavorite(cityName)) {
+                        removeFromFavorites(cityName);
+                    } else {
+                        addToFavorites(cityName);
+                    }
                 }
             });
             
@@ -926,6 +1149,7 @@ def index():
                 const data = await response.json();
 
                 if (response.ok) {
+                    document.getElementById('searchCityName').textContent = data.city;
                     document.getElementById('searchTemp').textContent = data.temperature;
                     document.getElementById('searchFeelsLike').textContent = `Feels like: ${data.feels_like}`;
                     document.getElementById('searchCondition').textContent = data.condition;
@@ -941,6 +1165,9 @@ def index():
                     document.getElementById('searchPressure').textContent = data.pressure;
                     document.getElementById('searchSunrise').textContent = data.sunrise;
                     document.getElementById('searchSunset').textContent = data.sunset;
+                    
+                    // Update favorite button state
+                    updateFavoriteButton(data.city);
                     
                     loadForecast(query, units);
                 } else {
