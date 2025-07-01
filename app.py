@@ -8,11 +8,11 @@ from flask import Flask, render_template_string, jsonify, request
 import json
 import os
 import requests
+from datetime import datetime
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
-from datetime import datetime
 
 app = Flask(__name__)
 
@@ -24,7 +24,7 @@ if not API_KEY:
 WEATHER_URL = "http://api.openweathermap.org/data/2.5/weather"
 FORECAST_URL = "http://api.openweathermap.org/data/2.5/forecast"
 GEOCODING_URL = "http://api.openweathermap.org/geo/1.0/direct"
-ONECALL_URL = "http://api.openweathermap.org/data/3.0/onecall"
+AIR_POLLUTION_URL = "http://api.openweathermap.org/data/2.5/air_pollution"
 
 # Popular cities for quick access
 POPULAR_CITIES = ["New York", "London", "Tokyo", "Paris", "Sydney", "Los Angeles", "Berlin", "Mumbai"]
@@ -54,38 +54,31 @@ def get_coordinates_for_city(city):
         print(f"Geocoding API Error: {e}")
         return None
 
-def get_enhanced_weather_data(lat, lon, units='imperial'):
-    """Get enhanced weather data including UV index using One Call API"""
+def get_air_quality_data(lat, lon):
+    """Get air quality data for coordinates"""
     try:
         params = {
             'lat': lat,
             'lon': lon,
-            'appid': API_KEY,
-            'units': units,
-            'exclude': 'minutely,alerts'
+            'appid': API_KEY
         }
-        response = requests.get(ONECALL_URL, params=params, timeout=10)
+        response = requests.get(AIR_POLLUTION_URL, params=params, timeout=10)
         
         if response.status_code == 200:
             data = response.json()
-            current = data['current']
-            daily = data['daily'][0]
-            hourly = data['hourly'][:24]  # Next 24 hours
+            aqi = data['list'][0]['main']['aqi']
             
-            # Calculate rain probability from hourly data
-            rain_prob = 0
-            for hour in hourly:
-                if 'pop' in hour:
-                    rain_prob = max(rain_prob, hour['pop'] * 100)
+            # AQI levels: 1=Good, 2=Fair, 3=Moderate, 4=Poor, 5=Very Poor
+            aqi_labels = {1: "Good", 2: "Fair", 3: "Moderate", 4: "Poor", 5: "Very Poor"}
+            aqi_colors = {1: "🟢", 2: "🟡", 3: "🟠", 4: "🔴", 5: "🟣"}
             
             return {
-                'uv_index': current.get('uvi', 0),
-                'rain_prob': f"{rain_prob:.0f}%",
-                'temp_min': daily['temp']['min'],
-                'temp_max': daily['temp']['max']
+                'aqi': aqi,
+                'aqi_label': aqi_labels.get(aqi, "Unknown"),
+                'aqi_color': aqi_colors.get(aqi, "⚪")
             }
     except Exception as e:
-        print(f"Enhanced Weather API Error: {e}")
+        print(f"Air Quality API Error: {e}")
         return None
 
 def get_weather_via_api(city, units='imperial'):
@@ -102,32 +95,48 @@ def get_weather_via_api(city, units='imperial'):
         if response.status_code == 200:
             data = response.json()
             temp_unit = '°F' if units == 'imperial' else '°C'
+            speed_unit = 'mph' if units == 'imperial' else 'm/s'
             
-            # Get enhanced data from One Call API
-            enhanced = get_enhanced_weather_data(data['coord']['lat'], data['coord']['lon'], units)
+            # Get air quality data
+            air_quality = get_air_quality_data(data['coord']['lat'], data['coord']['lon'])
+            
+            # Format sunrise/sunset times
+            sunrise_ts = data['sys'].get('sunrise', 0)
+            sunset_ts = data['sys'].get('sunset', 0)
+            sunrise_time = datetime.fromtimestamp(sunrise_ts).strftime('%H:%M') if sunrise_ts else '--:--'
+            sunset_time = datetime.fromtimestamp(sunset_ts).strftime('%H:%M') if sunset_ts else '--:--'
+            
+            # Convert wind speed for imperial units
+            wind_speed = data.get('wind', {}).get('speed', 0)
+            if units == 'imperial':
+                wind_speed = wind_speed * 2.237  # Convert m/s to mph
             
             result = {
                 'temperature': f"{int(data['main']['temp'])}{temp_unit}",
+                'feels_like': f"{int(data['main']['feels_like'])}{temp_unit}",
                 'condition': data['weather'][0]['description'],
                 'humidity': f"{data['main']['humidity']}%",
+                'wind_speed': f"{wind_speed:.1f} {speed_unit}",
+                'wind_direction': data.get('wind', {}).get('deg', 0),
+                'clouds': f"{data.get('clouds', {}).get('all', 0)}%",
+                'visibility': f"{data.get('visibility', 0) / 1000:.1f} km",
+                'pressure': f"{data['main'].get('pressure', 0)} hPa",
+                'sunrise': sunrise_time,
+                'sunset': sunset_time,
                 'city': data['name'],
                 'country': data['sys']['country']
             }
             
-            if enhanced:
+            # Add air quality if available
+            if air_quality:
                 result.update({
-                    'temp_min': f"{int(enhanced['temp_min'])}{temp_unit}",
-                    'temp_max': f"{int(enhanced['temp_max'])}{temp_unit}",
-                    'rain_prob': enhanced['rain_prob'],
-                    'uv_index': f"{enhanced['uv_index']:.0f}"
+                    'aqi': f"{air_quality['aqi_color']} {air_quality['aqi_label']}",
+                    'aqi_number': air_quality['aqi']
                 })
             else:
-                # Fallback values with proper placeholders
                 result.update({
-                    'temp_min': f"{int(data['main']['temp_min'])}{temp_unit}",
-                    'temp_max': f"{int(data['main']['temp_max'])}{temp_unit}",
-                    'rain_prob': "No data",
-                    'uv_index': "No data"
+                    'aqi': '⚪ No data',
+                    'aqi_number': 0
                 })
             
             return result
@@ -146,32 +155,48 @@ def get_weather_via_api(city, units='imperial'):
                 if coord_response.status_code == 200:
                     data = coord_response.json()
                     temp_unit = '°F' if units == 'imperial' else '°C'
+                    speed_unit = 'mph' if units == 'imperial' else 'm/s'
                     
-                    # Get enhanced data from One Call API
-                    enhanced = get_enhanced_weather_data(coordinates['lat'], coordinates['lon'], units)
+                    # Get air quality data
+                    air_quality = get_air_quality_data(coordinates['lat'], coordinates['lon'])
+                    
+                    # Format sunrise/sunset times
+                    sunrise_ts = data['sys'].get('sunrise', 0)
+                    sunset_ts = data['sys'].get('sunset', 0)
+                    sunrise_time = datetime.fromtimestamp(sunrise_ts).strftime('%H:%M') if sunrise_ts else '--:--'
+                    sunset_time = datetime.fromtimestamp(sunset_ts).strftime('%H:%M') if sunset_ts else '--:--'
+                    
+                    # Convert wind speed for imperial units
+                    wind_speed = data.get('wind', {}).get('speed', 0)
+                    if units == 'imperial':
+                        wind_speed = wind_speed * 2.237  # Convert m/s to mph
                     
                     result = {
                         'temperature': f"{int(data['main']['temp'])}{temp_unit}",
+                        'feels_like': f"{int(data['main']['feels_like'])}{temp_unit}",
                         'condition': data['weather'][0]['description'],
                         'humidity': f"{data['main']['humidity']}%",
+                        'wind_speed': f"{wind_speed:.1f} {speed_unit}",
+                        'wind_direction': data.get('wind', {}).get('deg', 0),
+                        'clouds': f"{data.get('clouds', {}).get('all', 0)}%",
+                        'visibility': f"{data.get('visibility', 0) / 1000:.1f} km",
+                        'pressure': f"{data['main'].get('pressure', 0)} hPa",
+                        'sunrise': sunrise_time,
+                        'sunset': sunset_time,
                         'city': coordinates['name'],
                         'country': coordinates['country']
                     }
                     
-                    if enhanced:
+                    # Add air quality if available
+                    if air_quality:
                         result.update({
-                            'temp_min': f"{int(enhanced['temp_min'])}{temp_unit}",
-                            'temp_max': f"{int(enhanced['temp_max'])}{temp_unit}",
-                            'rain_prob': enhanced['rain_prob'],
-                            'uv_index': f"{enhanced['uv_index']:.0f}"
+                            'aqi': f"{air_quality['aqi_color']} {air_quality['aqi_label']}",
+                            'aqi_number': air_quality['aqi']
                         })
                     else:
-                        # Fallback values with proper placeholders
                         result.update({
-                            'temp_min': f"{int(data['main']['temp_min'])}{temp_unit}",
-                            'temp_max': f"{int(data['main']['temp_max'])}{temp_unit}",
-                            'rain_prob': "No data",
-                            'uv_index': "No data"
+                            'aqi': '⚪ No data',
+                            'aqi_number': 0
                         })
                     
                     return result
@@ -422,37 +447,57 @@ def index():
             opacity: 0.9;
         }
         
-        .weather-details {
+        .feels-like {
+            font-size: 1em;
+            opacity: 0.8;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+        
+        .weather-details-grid {
             display: grid;
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 15px;
-            margin-top: 20px;
-            padding-top: 15px;
+            margin-top: 25px;
+            padding-top: 20px;
             border-top: 1px solid rgba(255, 255, 255, 0.3);
         }
         
-        .weather-detail-item {
+        .weather-detail {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 12px 15px;
             display: flex;
+            flex-direction: column;
             align-items: center;
-            gap: 5px;
-            font-size: 0.95em;
+            text-align: center;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+        
+        .weather-detail:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
         }
         
         .detail-icon {
-            font-size: 1.2em;
-            width: 20px;
+            font-size: 1.4em;
+            margin-bottom: 8px;
+            display: block;
         }
         
         .detail-label {
-            font-size: 0.85em;
-            opacity: 0.8;
-            min-width: 55px;
-            text-align: left;
+            font-size: 0.8em;
+            opacity: 0.9;
+            margin-bottom: 4px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .detail-value {
-            font-weight: 500;
-            flex: 1;
+            font-weight: 600;
+            font-size: 0.95em;
         }
         
         .popular-cities-title {
@@ -477,6 +522,9 @@ def index():
             font-weight: 500;
             transition: all 0.3s ease;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            width: auto;
+            min-width: fit-content;
+            white-space: nowrap;
         }
         
         .popular-city-btn:hover {
@@ -617,13 +665,13 @@ def index():
             }
             
             .popular-grid {
-                flex-direction: column;
                 gap: 10px;
             }
             
             .popular-city-btn {
-                width: 100%;
-                justify-content: center;
+                width: auto;
+                min-width: fit-content;
+                flex: 0 0 auto;
             }
             
             .mcp-info {
@@ -631,15 +679,26 @@ def index():
                 margin-top: 20px;
             }
             
-            .weather-details {
-                grid-template-columns: 1fr;
-                gap: 10px;
-                margin-top: 15px;
+            .weather-details-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 12px;
             }
             
-            .weather-detail-item {
+            .weather-detail {
+                padding: 10px 12px;
+            }
+            
+            .detail-icon {
+                font-size: 1.2em;
+                margin-bottom: 6px;
+            }
+            
+            .detail-label {
+                font-size: 0.75em;
+            }
+            
+            .detail-value {
                 font-size: 0.9em;
-                justify-content: center;
             }
         }
         
@@ -716,28 +775,49 @@ def index():
         <div class="search-result-card" id="searchResultCard">
             <div class="city-name" id="searchCityName"></div>
             <div class="temperature" id="searchTemp"></div>
+            <div class="feels-like" id="searchFeelsLike">Feels like: --</div>
             <div class="condition" id="searchCondition"></div>
             
-            <div class="weather-details">
-                <div class="weather-detail-item">
-                    <span class="detail-icon">🌡️</span>
-                    <span class="detail-label">Range:</span>
-                    <span class="detail-value" id="searchMinMax"></span>
-                </div>
-                <div class="weather-detail-item">
-                    <span class="detail-icon">🌦️</span>
-                    <span class="detail-label">Rain:</span>
-                    <span class="detail-value" id="searchRainProb"></span>
-                </div>
-                <div class="weather-detail-item">
-                    <span class="detail-icon">☀️</span>
-                    <span class="detail-label">UV:</span>
-                    <span class="detail-value" id="searchUVIndex"></span>
-                </div>
-                <div class="weather-detail-item">
+            <div class="weather-details-grid">
+                <div class="weather-detail">
                     <span class="detail-icon">💧</span>
                     <span class="detail-label">Humidity:</span>
-                    <span class="detail-value" id="searchHumidity"></span>
+                    <span class="detail-value" id="searchHumidity">--</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="detail-icon">💨</span>
+                    <span class="detail-label">Wind:</span>
+                    <span class="detail-value" id="searchWind">--</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="detail-icon">🌍</span>
+                    <span class="detail-label">Air Quality:</span>
+                    <span class="detail-value" id="searchAQI">--</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="detail-icon">☁️</span>
+                    <span class="detail-label">Clouds:</span>
+                    <span class="detail-value" id="searchClouds">--</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="detail-icon">👁️</span>
+                    <span class="detail-label">Visibility:</span>
+                    <span class="detail-value" id="searchVisibility">--</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="detail-icon">🌡️</span>
+                    <span class="detail-label">Pressure:</span>
+                    <span class="detail-value" id="searchPressure">--</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="detail-icon">🌅</span>
+                    <span class="detail-label">Sunrise:</span>
+                    <span class="detail-value" id="searchSunrise">--</span>
+                </div>
+                <div class="weather-detail">
+                    <span class="detail-icon">🌇</span>
+                    <span class="detail-label">Sunset:</span>
+                    <span class="detail-value" id="searchSunset">--</span>
                 </div>
             </div>
         </div>
@@ -764,6 +844,12 @@ def index():
 
     <script>
         let cities = {{ cities|tojson }};
+
+        function getWindDirection(degrees) {
+            const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+            const index = Math.round(degrees / 45) % 8;
+            return directions[index];
+        }
 
         document.addEventListener('DOMContentLoaded', async function() {
             renderPopularCities();
@@ -824,11 +910,16 @@ def index():
             card.classList.add('show');
             document.getElementById('searchCityName').textContent = query;
             document.getElementById('searchTemp').textContent = 'Loading...';
+            document.getElementById('searchFeelsLike').textContent = 'Feels like: --';
             document.getElementById('searchCondition').textContent = '';
-            document.getElementById('searchMinMax').textContent = '';
-            document.getElementById('searchRainProb').textContent = '';
-            document.getElementById('searchUVIndex').textContent = '';
-            document.getElementById('searchHumidity').textContent = '';
+            document.getElementById('searchHumidity').textContent = '--';
+            document.getElementById('searchWind').textContent = '--';
+            document.getElementById('searchAQI').textContent = '--';
+            document.getElementById('searchClouds').textContent = '--';
+            document.getElementById('searchVisibility').textContent = '--';
+            document.getElementById('searchPressure').textContent = '--';
+            document.getElementById('searchSunrise').textContent = '--';
+            document.getElementById('searchSunset').textContent = '--';
             
             try {
                 const response = await fetch(`/api/weather/${encodeURIComponent(query)}?units=${units}`);
@@ -836,29 +927,49 @@ def index():
 
                 if (response.ok) {
                     document.getElementById('searchTemp').textContent = data.temperature;
+                    document.getElementById('searchFeelsLike').textContent = `Feels like: ${data.feels_like}`;
                     document.getElementById('searchCondition').textContent = data.condition;
-                    document.getElementById('searchMinMax').textContent = `${data.temp_min} - ${data.temp_max}`;
-                    document.getElementById('searchRainProb').textContent = data.rain_prob;
-                    document.getElementById('searchUVIndex').textContent = `UV ${data.uv_index}`;
                     document.getElementById('searchHumidity').textContent = data.humidity;
+                    
+                    // Wind with direction
+                    const windDir = getWindDirection(data.wind_direction);
+                    document.getElementById('searchWind').textContent = `${data.wind_speed} ${windDir}`;
+                    
+                    document.getElementById('searchAQI').textContent = data.aqi;
+                    document.getElementById('searchClouds').textContent = data.clouds;
+                    document.getElementById('searchVisibility').textContent = data.visibility;
+                    document.getElementById('searchPressure').textContent = data.pressure;
+                    document.getElementById('searchSunrise').textContent = data.sunrise;
+                    document.getElementById('searchSunset').textContent = data.sunset;
+                    
                     loadForecast(query, units);
                 } else {
                     card.classList.add('error');
                     document.getElementById('searchTemp').textContent = '❌';
+                    document.getElementById('searchFeelsLike').textContent = 'Feels like: --';
                     document.getElementById('searchCondition').textContent = 'City not found - Please check the city name';
-                    document.getElementById('searchMinMax').textContent = '';
-                    document.getElementById('searchRainProb').textContent = '';
-                    document.getElementById('searchUVIndex').textContent = '';
-                    document.getElementById('searchHumidity').textContent = '';
+                    document.getElementById('searchHumidity').textContent = '--';
+                    document.getElementById('searchWind').textContent = '--';
+                    document.getElementById('searchAQI').textContent = '--';
+                    document.getElementById('searchClouds').textContent = '--';
+                    document.getElementById('searchVisibility').textContent = '--';
+                    document.getElementById('searchPressure').textContent = '--';
+                    document.getElementById('searchSunrise').textContent = '--';
+                    document.getElementById('searchSunset').textContent = '--';
                 }
             } catch (error) {
                 card.classList.add('error');
                 document.getElementById('searchTemp').textContent = '🌐';
+                document.getElementById('searchFeelsLike').textContent = 'Feels like: --';
                 document.getElementById('searchCondition').textContent = 'Network error - Please check your connection';
-                document.getElementById('searchMinMax').textContent = '';
-                document.getElementById('searchRainProb').textContent = '';
-                document.getElementById('searchUVIndex').textContent = '';
-                document.getElementById('searchHumidity').textContent = '';
+                document.getElementById('searchHumidity').textContent = '--';
+                document.getElementById('searchWind').textContent = '--';
+                document.getElementById('searchAQI').textContent = '--';
+                document.getElementById('searchClouds').textContent = '--';
+                document.getElementById('searchVisibility').textContent = '--';
+                document.getElementById('searchPressure').textContent = '--';
+                document.getElementById('searchSunrise').textContent = '--';
+                document.getElementById('searchSunset').textContent = '--';
             }
         }
 
@@ -939,13 +1050,25 @@ def get_weather(city):
     units = request.args.get('units', 'imperial')
     weather = get_weather_via_api(city, units)
     if weather:
-        return jsonify({
+        # Return all the enhanced weather data
+        result = {
             'city': weather['city'],
             'temperature': weather['temperature'],
+            'feels_like': weather['feels_like'],
             'condition': weather['condition'],
             'humidity': weather['humidity'],
+            'wind_speed': weather['wind_speed'],
+            'wind_direction': weather['wind_direction'],
+            'clouds': weather['clouds'],
+            'visibility': weather['visibility'],
+            'pressure': weather['pressure'],
+            'sunrise': weather['sunrise'],
+            'sunset': weather['sunset'],
+            'aqi': weather['aqi'],
+            'aqi_number': weather['aqi_number'],
             'real_data': True
-        })
+        }
+        return jsonify(result)
     else:
         return jsonify({'error': 'City not found'}), 404
 
