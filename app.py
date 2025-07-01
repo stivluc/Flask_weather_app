@@ -534,7 +534,7 @@ def index():
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            filter: drop-shadow(0 1px 3px rgba(255,235,59,0.6));
+            filter: drop-shadow(0 1px 3px rgba(255,235,59,0.8));
         }
         
         .favorite-cities {
