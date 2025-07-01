@@ -27,7 +27,7 @@ GEOCODING_URL = "http://api.openweathermap.org/geo/1.0/direct"
 AIR_POLLUTION_URL = "http://api.openweathermap.org/data/2.5/air_pollution"
 
 # Popular cities for quick access
-POPULAR_CITIES = ["New York", "London", "Tokyo", "Paris", "Sydney", "Los Angeles", "Berlin", "Mumbai"]
+POPULAR_CITIES = ["New York", "London", "Tokyo", "Paris", "Sydney", "Los Angeles", "Berlin"]
 
 def get_coordinates_for_city(city):
     """Get coordinates for a city using OpenWeatherMap Geocoding API"""
@@ -503,7 +503,7 @@ def index():
         .weather-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             margin-bottom: 15px;
         }
         
@@ -511,17 +511,17 @@ def index():
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.3);
             color: white;
-            padding: 8px 12px;
+            padding: 6px 8px;
             border-radius: 20px;
             cursor: pointer;
-            font-size: 18px;
+            font-size: 16px;
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         }
         
         .favorite-btn:hover {
             background: rgba(255, 255, 255, 0.3);
-            transform: scale(1.1);
+            transform: scale(1.05);
         }
         
         .favorite-btn.favorited {
@@ -595,7 +595,10 @@ def index():
             border-radius: 50%;
             width: 20px;
             height: 20px;
+            min-width: 20px;
+            min-height: 20px;
             font-size: 12px;
+            line-height: 1;
             cursor: pointer;
             position: absolute;
             top: -5px;
@@ -604,6 +607,7 @@ def index():
             align-items: center;
             justify-content: center;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
         
         .favorite-city-btn .remove-favorite:hover {
@@ -886,7 +890,7 @@ def index():
         <div class="search-result-card" id="searchResultCard">
             <div class="weather-header">
                 <div class="city-name" id="searchCityName"></div>
-                <button class="favorite-btn" id="favoriteBtn" title="Add to favorites">⭐</button>
+                <button class="favorite-btn" id="favoriteBtn" title="Add to favorites">☆</button>
             </div>
             <div class="temperature" id="searchTemp"></div>
             <div class="feels-like" id="searchFeelsLike">Feels like: --</div>
@@ -1053,9 +1057,11 @@ def index():
             if (currentCity === cityName) {
                 if (isFavorite(cityName)) {
                     favoriteBtn.classList.add('favorited');
+                    favoriteBtn.innerHTML = '★';
                     favoriteBtn.title = 'Remove from favorites';
                 } else {
                     favoriteBtn.classList.remove('favorited');
+                    favoriteBtn.innerHTML = '☆';
                     favoriteBtn.title = 'Add to favorites';
                 }
             }
