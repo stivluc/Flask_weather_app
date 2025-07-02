@@ -1,6 +1,8 @@
 # 🌤️ Weather Dashboard
 
-A real-time weather dashboard with data from OpenWeatherMap API. Built to try Flask.
+A real-time weather dashboard with data from OpenWeatherMap API. Built to learn Flask.
+Live demo: https://flask-weather-app.stivluc.com
+⚠️ It's a free web hosting instance, spinning down with inactivity, which can delay requests by 50 seconds or more.
 
 ## ✨ Features
 
